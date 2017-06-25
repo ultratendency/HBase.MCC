@@ -25,10 +25,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class HTableMultiCluster implements HTableInterface {
+public class HTableMultiCluster implements Table {
 
-  HTableInterface primaryHTable;
-  Collection<HTableInterface> failoverHTables;
+  Table primaryHTable;
+  Collection<Table> failoverHTables;
   Configuration originalConfiguration;
   boolean isMasterMaster;
   int waitTimeBeforeAcceptingResults;
@@ -56,8 +56,8 @@ public class HTableMultiCluster implements HTableInterface {
   }
 
   public HTableMultiCluster(Configuration originalConfiguration,
-                            HTableInterface primaryHTable,
-                            Collection<HTableInterface> failoverHTables, boolean isMasterMaster,
+                            Table primaryHTable,
+                            Collection<Table> failoverHTables, boolean isMasterMaster,
                             int waitTimeBeforeAcceptingResults, int waitTimeBeforeRequestingFailover,
                             int waitTimeBeforeMutatingFailover,
                             int waitTimeBeforeMutatingFailoverWithPrimaryException,
@@ -84,7 +84,7 @@ public class HTableMultiCluster implements HTableInterface {
   }
 
   public byte[] getTableName() {
-    return primaryHTable.getTableName();
+    return primaryHTable.getName().toBytes();
   }
 
   public TableName getName() {
@@ -104,12 +104,17 @@ public class HTableMultiCluster implements HTableInterface {
     return multiClusterExists(get).getOriginalReturn();
   }
 
+  @Override
+  public boolean[] existsAll(List<Get> list) throws IOException {
+    return new boolean[0];
+  }
+
   public Tuple<Boolean> multiClusterExists(final Get get) throws IOException {
     long startTime = System.currentTimeMillis();
 
     HBaseTableFunction<Boolean> function = new HBaseTableFunction<Boolean>() {
       @Override
-      public Boolean call(HTableInterface table) throws Exception {
+      public Boolean call(Table table) throws Exception {
         return table.exists(get);
       }
     };
@@ -125,31 +130,31 @@ public class HTableMultiCluster implements HTableInterface {
     return new Tuple<Boolean>(result.isPrimary, doesExist);
   }
 
-  public Boolean[] exists(final List<Get> gets) throws IOException {
-    return multiClusterExists(gets).getOriginalReturn();
-  }
+//  public Boolean[] exists(final List<Get> gets) throws IOException {
+//    return multiClusterExists(gets).getOriginalReturn();
+//  }
 
-  public Tuple<Boolean[]> multiClusterExists(final List<Get> gets) throws IOException {
-    long startTime = System.currentTimeMillis();
-
-    HBaseTableFunction<Boolean[]> function = new HBaseTableFunction<Boolean[]>() {
-      @Override
-      public Boolean[] call(HTableInterface table) throws Exception {
-        return table.exists(gets);
-      }
-    };
-
-    SpeculativeRequester.ResultWrapper<Boolean[]> result = (new SpeculativeRequester<Boolean[]>(
-            waitTimeBeforeRequestingFailover, waitTimeBeforeAcceptingResults, lastPrimaryFail,
-            waitTimeFromLastPrimaryFail)).
-            request(function, primaryHTable, failoverHTables);
-
-    stats.addGetList(result.isPrimary, System.currentTimeMillis() - startTime);
-
-    Boolean[] doesExists = result.t;
-
-    return new Tuple<Boolean[]>(result.isPrimary, doesExists);
-  }
+//  public Tuple<Boolean[]> multiClusterExists(final List<Get> gets) throws IOException {
+//    long startTime = System.currentTimeMillis();
+//
+//    HBaseTableFunction<Boolean[]> function = new HBaseTableFunction<Boolean[]>() {
+//      @Override
+//      public Boolean[] call(Table table) throws Exception {
+//        return table.exists(gets);
+//      }
+//    };
+//
+//    SpeculativeRequester.ResultWrapper<Boolean[]> result = (new SpeculativeRequester<Boolean[]>(
+//            waitTimeBeforeRequestingFailover, waitTimeBeforeAcceptingResults, lastPrimaryFail,
+//            waitTimeFromLastPrimaryFail)).
+//            request(function, primaryHTable, failoverHTables);
+//
+//    stats.addGetList(result.isPrimary, System.currentTimeMillis() - startTime);
+//
+//    Boolean[] doesExists = result.t;
+//
+//    return new Tuple<Boolean[]>(result.isPrimary, doesExists);
+//  }
 
   public void batch(final List<? extends Row> actions, final Object[] results)
           throws IOException, InterruptedException {
@@ -182,7 +187,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Result> function = new HBaseTableFunction<Result>() {
       @Override
-      public Result call(HTableInterface table) throws Exception {
+      public Result call(Table table) throws Exception {
         return table.get(get);
       }
     };
@@ -207,7 +212,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Result[]> function = new HBaseTableFunction<Result[]>() {
       @Override
-      public Result[] call(HTableInterface table) throws Exception {
+      public Result[] call(Table table) throws Exception {
         return table.get(gets);
       }
     };
@@ -235,8 +240,11 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Result> function = new HBaseTableFunction<Result>() {
       @Override
-      public Result call(HTableInterface table) throws Exception {
-        return table.getRowOrBefore(row, family);
+      public Result call(Table table) throws Exception {
+
+        return (Result)table.getScanner(row, family);
+
+        //return table.getRowOrBefore(row, family);
       }
     };
 
@@ -261,7 +269,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<ResultScanner> function = new HBaseTableFunction<ResultScanner>() {
       @Override
-      public ResultScanner call(HTableInterface table) throws Exception {
+      public ResultScanner call(Table table) throws Exception {
         return table.getScanner(scan);
       }
     };
@@ -287,7 +295,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<ResultScanner> function = new HBaseTableFunction<ResultScanner>() {
       @Override
-      public ResultScanner call(HTableInterface table) throws Exception {
+      public ResultScanner call(Table table) throws Exception {
         return table.getScanner(family);
       }
     };
@@ -314,7 +322,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<ResultScanner> function = new HBaseTableFunction<ResultScanner>() {
       @Override
-      public ResultScanner call(HTableInterface table) throws Exception {
+      public ResultScanner call(Table table) throws Exception {
         return table.getScanner(family, qualifier);
       }
     };
@@ -360,7 +368,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Void> function = new HBaseTableFunction<Void>() {
       @Override
-      public Void call(HTableInterface table) throws Exception {
+      public Void call(Table table) throws Exception {
         synchronized (table) {
           System.out.println("table.put.start:" + table.getConfiguration().get("hbase.zookeeper.quorum") + " " + table.getName() + " " + Bytes.toString(newPut.getRow()));
           try {
@@ -398,7 +406,7 @@ public class HTableMultiCluster implements HTableInterface {
         // This will protect us from a multicluster sumbission
         if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
           newPut
-                  .add(cell.getFamily(), cell.getQualifier(), ts, cell.getValue());
+                  .addColumn(cell.getFamily(), cell.getQualifier(), ts, cell.getValue());
         } else {
           newPut.add(cell);
         }
@@ -440,7 +448,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Void> function = new HBaseTableFunction<Void>() {
       @Override
-      public Void call(HTableInterface table) throws Exception {
+      public Void call(Table table) throws Exception {
         table.put(newPuts);
         return null;
       }
@@ -462,6 +470,11 @@ public class HTableMultiCluster implements HTableInterface {
     return primaryHTable.checkAndPut(row, family, qualifier, value, put);
   }
 
+  @Override
+  public boolean checkAndPut(byte[] bytes, byte[] bytes1, byte[] bytes2, CompareFilter.CompareOp compareOp, byte[] bytes3, Put put) throws IOException {
+    return false;
+  }
+
   public void delete(final Delete delete) throws IOException {
     multiClusterDelete(delete);
   }
@@ -471,7 +484,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Void> function = new HBaseTableFunction<Void>() {
       @Override
-      public Void call(HTableInterface table) throws Exception {
+      public Void call(Table table) throws Exception {
         table.delete(delete);
         return null;
       }
@@ -496,7 +509,7 @@ public class HTableMultiCluster implements HTableInterface {
 
     HBaseTableFunction<Void> function = new HBaseTableFunction<Void>() {
       @Override
-      public Void call(HTableInterface table) throws Exception {
+      public Void call(Table table) throws Exception {
         table.delete(deletes);
         return null;
       }
@@ -515,6 +528,11 @@ public class HTableMultiCluster implements HTableInterface {
   public boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
                                 byte[] value, Delete delete) throws IOException {
     return primaryHTable.checkAndDelete(row, family, qualifier, value, delete);
+  }
+
+  @Override
+  public boolean checkAndDelete(byte[] bytes, byte[] bytes1, byte[] bytes2, CompareFilter.CompareOp compareOp, byte[] bytes3, Delete delete) throws IOException {
+    return false;
   }
 
   public void mutateRow(final RowMutations rm) throws IOException {
@@ -541,19 +559,19 @@ public class HTableMultiCluster implements HTableInterface {
             durability);
   }
 
-  @Deprecated
-  public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-                                   long amount, boolean writeToWAL) throws IOException {
-    return primaryHTable.incrementColumnValue(row, family, qualifier, amount,
-            writeToWAL);
-  }
+//  @Deprecated
+//  public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
+//                                   long amount, boolean writeToWAL) throws IOException {
+//    return primaryHTable.incrementColumnValue(row, family, qualifier, amount,
+//            writeToWAL);
+//  }
 
-  public boolean isAutoFlush() {
-
-    boolean primaryAnswer = primaryHTable.isAutoFlush();
-
-    return primaryAnswer;
-  }
+//  public boolean isAutoFlush() {
+//
+//    boolean primaryAnswer = primaryHTable.isAutoFlush();
+//
+//    return primaryAnswer;
+//  }
 
   public void flushCommits() throws IOException {
     if (bufferPutList.size() > 0) {
@@ -580,7 +598,7 @@ public class HTableMultiCluster implements HTableInterface {
       LOG.error("Exception while flushCommits primary", e);
       lastException = e;
     }
-    for (final HTableInterface failoverTable : failoverHTables) {
+    for (final Table failoverTable : failoverHTables) {
       try {
         synchronized (failoverTable) {
           failoverTable.close();
