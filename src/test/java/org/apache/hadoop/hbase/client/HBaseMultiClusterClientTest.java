@@ -12,7 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class MultiHBaseClusterClientTest {
+public class HBaseMultiClusterClientTest {
 
   @Test
   public void testHBaseMultiClusterClientTest() throws Exception {
@@ -74,7 +74,7 @@ public class MultiHBaseClusterClientTest {
       Put put1 = new Put(Bytes.toBytes("A1"));
       put1.addColumn(FAM_NAME, QUAL_NAME, VALUE);
       multiTable.put(put1);
-    //  connection.getBufferedMutator(TABLE_NAME).flush();
+      connection.getBufferedMutator(TABLE_NAME).flush();
 
 
       Get get1 = new Get(Bytes.toBytes("A1"));
@@ -125,7 +125,7 @@ public class MultiHBaseClusterClientTest {
       put3.addColumn(FAM_NAME, QUAL_NAME, VALUE);
       multiTable = connection.getTable(TABLE_NAME);
       multiTable.put(put3);
-//      connection.getBufferedMutator(TABLE_NAME).flush();
+      connection.getBufferedMutator(TABLE_NAME).flush();
       System.out.println("------------8");
 
       Get get3 = new Get(Bytes.toBytes("A3"));
