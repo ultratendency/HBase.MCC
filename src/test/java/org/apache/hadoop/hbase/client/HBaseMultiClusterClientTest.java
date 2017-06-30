@@ -12,7 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class HBaseMultiClusterClientTest {
+public class MultiHBaseClusterClientTest {
 
   @Test
   public void testHBaseMultiClusterClientTest() throws Exception {

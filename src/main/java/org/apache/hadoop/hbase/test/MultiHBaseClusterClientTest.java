@@ -3,6 +3,7 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
@@ -12,13 +13,25 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static junit.framework.TestCase.assertFalse;
+
+
 /**
  * Created by balachandrapai on 19.06.17.
  */
-public class HBaseMCCTest {
+public class MultiHBaseClusterClientTest {
 
-    @Test
+    Configuration combinedConfig;
+    Connection connection;
+
+
+    @Before
     public void initialize(){
+
+
+
+        System.setProperty("java.security.krb5.conf", "src/resources/krb5.conf");
+        System.setProperty("sun.security.krb5.debug", "true");
 
 
         //Primary Cluster
@@ -33,7 +46,7 @@ public class HBaseMCCTest {
         UserGroupInformation.setConfiguration(primaryConfig);
         System.out.println("Principal Authentication: ");
         final String user = "hbase/cdhmaster1@EXAMPLE.COM";
-        final String keyPath = "/run/cloudera-scm-agent/process/71-hbase-REGIONSERVER/hbase.keytab";
+        final String keyPath = "src/resources/cdhmaster1/hbase.keytab";
         try {
             UserGroupInformation.loginUserFromKeytab(user, keyPath);
         } catch (IOException e) {
@@ -53,56 +66,61 @@ public class HBaseMCCTest {
         UserGroupInformation.setConfiguration(primaryConfig);
         System.out.println("Principal Authentication: ");
         final String user2 = "hbase/cdhmaster2@EXAMPLE.COM";
-        final String keyPath2 = "/run/cloudera-scm-agent/process/47-hbase-MASTER/hbase.keytab";
+        final String keyPath2 = "src/resources/cdhmaster2/hbase.keytab";
         try {
-            UserGroupInformation.loginUserFromKeytab(user, keyPath);
+            UserGroupInformation.loginUserFromKeytab(user2, keyPath2);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-
-//        //failover Cluster2
-//        Configuration failover2 = HBaseConfiguration.create();
-//
-//        failover2.set("hbase.zookeeper.quorum", "cdhmaster3");
-//        failover2.set("hbase.zookeeper.property.clientPort", "2181");
-//        failover2.set("hadoop.security.authentication", "Kerberos");
-//        failover2.set("hbase.security.authentication", "kerberos");
-//        failover2.set("hbase.master.kerberos.principal", "hbase/_HOST@EXAMPLE.COM");
-//        failover2.set("hbase.regionserver.kerberos.principal", "hbase/_HOST@EXAMPLE.COM");
-//        UserGroupInformation.setConfiguration(primaryConfig);
-//        System.out.println("Principal Authentication: ");
-//        final String user3 = "hbase/cdhmaster3@EXAMPLE.COM";
-//        final String keyPath3 = "/home/jing/jing.keytab";
-//        try {
-//            UserGroupInformation.loginUserFromKeytab(user, keyPath);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
 
         Map<String, Configuration> failoverClusters = new HashMap<String, Configuration>();
+
         failoverClusters.put("failover", failover);
-//        failoverClusters.put("failover2", failover2);
 
-        Configuration combinedConfig = HBaseMultiClusterConfigUtil.combineConfigurations(primaryConfig, failoverClusters);
-
-        combinedConfig.setInt(ConfigConst.HBASE_WAIT_TIME_BEFORE_TRYING_PRIMARY_AFTER_FAILURE, 0);
+        combinedConfig = HBaseMultiClusterConfigUtil.combineConfigurations(primaryConfig, failoverClusters);
 
         try {
-            Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(combinedConfig);
+            connection = HConnectionManagerMultiClusterWrapper.createConnection(combinedConfig);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    @Test
+    public void readFromMCC(){
+        try {
             Table multiTable = connection.getTable(TableName.valueOf("t1"));
+            Get get1 = new Get(Bytes.toBytes("row1"));
 
-            Get get = new Get(Bytes.toBytes("row1"));
+            Result result = multiTable.get(get1);
 
-            Result result = multiTable.get(get);
-
+            assertFalse(result.isEmpty());
 
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
 
+    @Test
+    public void writeToMCC(){
+
+        try {
+            Table multiTable = connection.getTable(TableName.valueOf("t1"));
+            Put put1 = new Put(Bytes.toBytes("row4"));
+
+            put1.addColumn(Bytes.toBytes("cf1"), Bytes.toBytes("c1"), Bytes.toBytes("Data"));
+            multiTable.put(put1);
+
+            Get get1 = new Get(Bytes.toBytes("row4"));
+            Result result = multiTable.get(get1);
+
+            assertFalse(result.isEmpty());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
