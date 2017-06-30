@@ -74,7 +74,6 @@ public class HBaseMultiClusterClientTest {
       Put put1 = new Put(Bytes.toBytes("A1"));
       put1.addColumn(FAM_NAME, QUAL_NAME, VALUE);
       multiTable.put(put1);
-      connection.getBufferedMutator(TABLE_NAME).flush();
 
 
       Get get1 = new Get(Bytes.toBytes("A1"));
@@ -125,7 +124,6 @@ public class HBaseMultiClusterClientTest {
       put3.addColumn(FAM_NAME, QUAL_NAME, VALUE);
       multiTable = connection.getTable(TABLE_NAME);
       multiTable.put(put3);
-      connection.getBufferedMutator(TABLE_NAME).flush();
       System.out.println("------------8");
 
       Get get3 = new Get(Bytes.toBytes("A3"));

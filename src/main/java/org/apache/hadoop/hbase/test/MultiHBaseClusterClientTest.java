@@ -1,4 +1,4 @@
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -8,35 +8,25 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
 import org.junit.Test;
-
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
-import static junit.framework.TestCase.assertFalse;
-
+import org.junit.Assert;
 
 /**
  * Created by balachandrapai on 19.06.17.
  */
 public class MultiHBaseClusterClientTest {
-
     Configuration combinedConfig;
     Connection connection;
 
-
     @Before
     public void initialize(){
-
-
-
-        System.setProperty("java.security.krb5.conf", "src/resources/krb5.conf");
+        System.setProperty("java.security.krb5.conf", "home/balachandrapai/Desktop/Security/krb5.conf");
         System.setProperty("sun.security.krb5.debug", "true");
-
 
         //Primary Cluster
         Configuration primaryConfig = HBaseConfiguration.create();
-
         primaryConfig.set("hbase.zookeeper.quorum", "cdhmaster1");
         primaryConfig.set("hbase.zookeeper.property.clientPort", "2181");
         primaryConfig.set("hadoop.security.authentication", "kerberos");
@@ -46,17 +36,15 @@ public class MultiHBaseClusterClientTest {
         UserGroupInformation.setConfiguration(primaryConfig);
         System.out.println("Principal Authentication: ");
         final String user = "hbase/cdhmaster1@EXAMPLE.COM";
-        final String keyPath = "src/resources/cdhmaster1/hbase.keytab";
+        final String keyPath = "home/balachandrapai/Desktop/Security/cdhmaster1/hbase.keytab";
         try {
             UserGroupInformation.loginUserFromKeytab(user, keyPath);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-
         //failover Cluster
         Configuration failover = HBaseConfiguration.create();
-
         failover.set("hbase.zookeeper.quorum", "cdhmaster2");
         failover.set("hbase.zookeeper.property.clientPort", "2181");
         failover.set("hadoop.security.authentication", "kerberos");
@@ -66,16 +54,14 @@ public class MultiHBaseClusterClientTest {
         UserGroupInformation.setConfiguration(primaryConfig);
         System.out.println("Principal Authentication: ");
         final String user2 = "hbase/cdhmaster2@EXAMPLE.COM";
-        final String keyPath2 = "src/resources/cdhmaster2/hbase.keytab";
+        final String keyPath2 = "home/balachandrapai/Desktop/Security/hbase.keytab";
         try {
             UserGroupInformation.loginUserFromKeytab(user2, keyPath2);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-
         Map<String, Configuration> failoverClusters = new HashMap<String, Configuration>();
-
         failoverClusters.put("failover", failover);
 
         combinedConfig = HBaseMultiClusterConfigUtil.combineConfigurations(primaryConfig, failoverClusters);
@@ -95,8 +81,7 @@ public class MultiHBaseClusterClientTest {
 
             Result result = multiTable.get(get1);
 
-            assertFalse(result.isEmpty());
-
+            Assert.assertEquals(Boolean.FALSE, result.isEmpty());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -104,7 +89,7 @@ public class MultiHBaseClusterClientTest {
     }
 
     @Test
-    public void writeToMCC(){
+    public void writeToMCC() {
 
         try {
             Table multiTable = connection.getTable(TableName.valueOf("t1"));
@@ -116,13 +101,10 @@ public class MultiHBaseClusterClientTest {
             Get get1 = new Get(Bytes.toBytes("row4"));
             Result result = multiTable.get(get1);
 
-            assertFalse(result.isEmpty());
+            Assert.assertEquals(Boolean.FALSE, result.isEmpty());
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
-
-
 }

@@ -7,10 +7,7 @@ import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.CompareFilter;
@@ -106,7 +103,7 @@ public class HTableMultiCluster implements Table {
 
   @Override
   public boolean[] existsAll(List<Get> list) throws IOException {
-    return new boolean[0];
+    return primaryHTable.existsAll(list);
   }
 
   public Tuple<Boolean> multiClusterExists(final Get get) throws IOException {
@@ -130,31 +127,37 @@ public class HTableMultiCluster implements Table {
     return new Tuple<Boolean>(result.isPrimary, doesExist);
   }
 
-//  public Boolean[] exists(final List<Get> gets) throws IOException {
-//    return multiClusterExists(gets).getOriginalReturn();
-//  }
+  public Boolean[] exists(final List<Get> gets) throws IOException {
+    return multiClusterExists(gets).getOriginalReturn();
+  }
 
-//  public Tuple<Boolean[]> multiClusterExists(final List<Get> gets) throws IOException {
-//    long startTime = System.currentTimeMillis();
-//
-//    HBaseTableFunction<Boolean[]> function = new HBaseTableFunction<Boolean[]>() {
-//      @Override
-//      public Boolean[] call(Table table) throws Exception {
-//        return table.exists(gets);
-//      }
-//    };
-//
-//    SpeculativeRequester.ResultWrapper<Boolean[]> result = (new SpeculativeRequester<Boolean[]>(
-//            waitTimeBeforeRequestingFailover, waitTimeBeforeAcceptingResults, lastPrimaryFail,
-//            waitTimeFromLastPrimaryFail)).
-//            request(function, primaryHTable, failoverHTables);
-//
-//    stats.addGetList(result.isPrimary, System.currentTimeMillis() - startTime);
-//
-//    Boolean[] doesExists = result.t;
-//
-//    return new Tuple<Boolean[]>(result.isPrimary, doesExists);
-//  }
+  public Tuple<Boolean[]> multiClusterExists(final List<Get> gets) throws IOException {
+    long startTime = System.currentTimeMillis();
+
+    HBaseTableFunction<Boolean[]> function = new HBaseTableFunction<Boolean[]>() {
+      Boolean[] bool = new Boolean[gets.size()];
+      int i=0;
+      @Override
+      public Boolean[] call(Table table) throws Exception {
+        for (Get gt: gets) {
+          bool[i]= table.exists(gt);
+          i++;
+        }
+        return bool;
+      }
+    };
+
+    SpeculativeRequester.ResultWrapper<Boolean[]> result = (new SpeculativeRequester<Boolean[]>(
+            waitTimeBeforeRequestingFailover, waitTimeBeforeAcceptingResults, lastPrimaryFail,
+            waitTimeFromLastPrimaryFail)).
+            request(function, primaryHTable, failoverHTables);
+
+    stats.addGetList(result.isPrimary, System.currentTimeMillis() - startTime);
+
+    Boolean[] doesExists = result.t;
+
+    return new Tuple<Boolean[]>(result.isPrimary, doesExists);
+  }
 
   public void batch(final List<? extends Row> actions, final Object[] results)
           throws IOException, InterruptedException {
@@ -241,10 +244,7 @@ public class HTableMultiCluster implements Table {
     HBaseTableFunction<Result> function = new HBaseTableFunction<Result>() {
       @Override
       public Result call(Table table) throws Exception {
-
         return (Result)table.getScanner(row, family);
-
-        //return table.getRowOrBefore(row, family);
       }
     };
 
@@ -406,7 +406,7 @@ public class HTableMultiCluster implements Table {
         // This will protect us from a multicluster sumbission
         if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
           newPut
-                  .addColumn(cell.getFamily(), cell.getQualifier(), ts, cell.getValue());
+                  .addColumn(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell), ts, CellUtil.cloneValue(cell));
         } else {
           newPut.add(cell);
         }
@@ -472,7 +472,7 @@ public class HTableMultiCluster implements Table {
 
   @Override
   public boolean checkAndPut(byte[] bytes, byte[] bytes1, byte[] bytes2, CompareFilter.CompareOp compareOp, byte[] bytes3, Put put) throws IOException {
-    return false;
+    return primaryHTable.checkAndPut(bytes, bytes1, bytes2, compareOp, bytes3, put);
   }
 
   public void delete(final Delete delete) throws IOException {
@@ -532,7 +532,7 @@ public class HTableMultiCluster implements Table {
 
   @Override
   public boolean checkAndDelete(byte[] bytes, byte[] bytes1, byte[] bytes2, CompareFilter.CompareOp compareOp, byte[] bytes3, Delete delete) throws IOException {
-    return false;
+    return primaryHTable.checkAndDelete(bytes, bytes1, bytes2, compareOp, bytes3, delete);
   }
 
   public void mutateRow(final RowMutations rm) throws IOException {

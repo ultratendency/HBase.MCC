@@ -230,7 +230,7 @@ public class HBaseAdminMultiCluster extends HBaseAdmin {
     callArray[counter++] = new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        LOG.info("createTableAsync: " + desc.getName() + " for cluster: primary");
+        LOG.info("createTableAsync: " + desc.getTableName() + " for cluster: primary");
         HBaseAdminMultiCluster.super.createTableAsync(desc, splitKeys);
         return null;
       }
@@ -240,7 +240,7 @@ public class HBaseAdminMultiCluster extends HBaseAdmin {
       callArray[counter++] = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
-          LOG.info("createTableAsync: " + desc.getName() + " for cluster: " + entry.getKey());
+          LOG.info("createTableAsync: " + desc.getTableName() + " for cluster: " + entry.getKey());
           entry.getValue().createTableAsync(desc, splitKeys);
           return null;
         }

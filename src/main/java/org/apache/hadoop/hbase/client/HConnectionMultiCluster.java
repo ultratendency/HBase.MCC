@@ -185,22 +185,22 @@ public class HConnectionMultiCluster implements Connection {
 
   @Override
   public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
-    return null;
+    return primaryConnection.getBufferedMutator(tableName);
   }
 
   @Override
   public BufferedMutator getBufferedMutator(BufferedMutatorParams bufferedMutatorParams) throws IOException {
-    return null;
+    return primaryConnection.getBufferedMutator(bufferedMutatorParams);
   }
 
   @Override
   public RegionLocator getRegionLocator(TableName tableName) throws IOException {
-    return null;
+    return primaryConnection.getRegionLocator(tableName);
   }
 
   @Override
   public Admin getAdmin() throws IOException {
-    return null;
+    return primaryConnection.getAdmin();
   }
 
   public boolean isMasterRunning() throws MasterNotRunningException,
@@ -255,9 +255,16 @@ public class HConnectionMultiCluster implements Connection {
   }
 
   @Deprecated
-//  public String[] getTableNames() throws IOException {
-//    return primaryConnection.getAdmin().listTableNames().toString();
-//  }
+  public String[] getTableNames() throws IOException {
+    TableName[] tableNames = primaryConnection.getAdmin().listTableNames();
+    String[] tNames = new String[tableNames.length];
+    int i =0;
+    for (TableName tn: tableNames) {
+      tNames[i] = tn.toString();
+      i++;
+    }
+    return tNames;
+  }
 
   public TableName[] listTableNames() throws IOException {
     return primaryConnection.getAdmin().listTableNames();
@@ -454,17 +461,29 @@ public class HConnectionMultiCluster implements Connection {
 //    return primaryConnection.getCurrentNrHRS();
 //  }
 
-//  public HTableDescriptor[] getHTableDescriptorsByTableName(
-//      List<TableName> tableNames) throws IOException {
-//    return primaryConnection.getAdmin().getTableDescriptor(tableNames)
-//  }
-//
-//  @Deprecated
-//  public
-//  HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
-//      throws IOException {
-//    return primaryConnection.getAdmin().getTableDescriptor(tableNames);
-//  }
+  public HTableDescriptor[] getHTableDescriptorsByTableName(
+      List<TableName> tableNames) throws IOException {
+    HTableDescriptor tdArr[] = new HTableDescriptor[tableNames.size()];
+    int i=0;
+    for (TableName tn: tableNames) {
+      tdArr[i] = primaryConnection.getAdmin().getTableDescriptor(tn);
+      i++;
+    }
+    return tdArr;
+  }
+
+  @Deprecated
+  public
+  HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
+      throws IOException {
+    HTableDescriptor tdArr[] = new HTableDescriptor[tableNames.size()];
+    int i=0;
+    for (String tn: tableNames) {
+      tdArr[i] = primaryConnection.getAdmin().getTableDescriptor(TableName.valueOf(tn));
+      i++;
+    }
+    return tdArr;
+  }
 
   public boolean isClosed() {
     return primaryConnection.isClosed();

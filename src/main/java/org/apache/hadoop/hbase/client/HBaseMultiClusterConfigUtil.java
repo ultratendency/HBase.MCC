@@ -199,13 +199,6 @@ public class HBaseMultiClusterConfigUtil {
     return combineConfigurations(primary, map);
   }
 
-  public static Configuration combineConfigurations(Configuration primary, Configuration failover, Configuration failover2 ) {
-    Map<String, Configuration> map = new HashMap<String, Configuration>();
-    map.put("failover1", failover);
-    map.put("failover2", failover2);
-    return combineConfigurations(primary, map);
-  }
-
   // This method obtains the Hbase configuration from 2 clusters and combines
   // them
   public static Configuration combineConfigurations(String host1, String user1, String pwd1,
