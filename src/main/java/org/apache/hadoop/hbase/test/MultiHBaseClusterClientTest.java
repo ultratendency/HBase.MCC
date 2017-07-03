@@ -3,7 +3,13 @@ package org.apache.hadoop.hbase.test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.HBaseMultiClusterConfigUtil;
+import org.apache.hadoop.hbase.client.HConnectionManagerMultiClusterWrapper;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
@@ -81,7 +87,7 @@ public class MultiHBaseClusterClientTest {
 
             Result result = multiTable.get(get1);
 
-            Assert.assertEquals(Boolean.FALSE, result.isEmpty());
+            Assert.assertFalse(result.isEmpty());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -101,8 +107,7 @@ public class MultiHBaseClusterClientTest {
             Get get1 = new Get(Bytes.toBytes("row4"));
             Result result = multiTable.get(get1);
 
-            Assert.assertEquals(Boolean.FALSE, result.isEmpty());
-
+            Assert.assertFalse(result.isEmpty());
         } catch (IOException e) {
             e.printStackTrace();
         }

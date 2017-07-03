@@ -15,9 +15,10 @@
 
         <maven.compiler.target>1.7</maven.compiler.target>
         <maven.compiler.source>1.7</maven.compiler.source>
-		<hadoop.version>2.6.0-cdh5.10.1</hadoop.version>
-		<hbase.version>1.2.0-cdh5.10.1</hbase.version>
-		<cloudera-manager.version>5.10.1</cloudera-manager.version>
+		<cdh.version>5.10.1</cdh.version>
+		<hadoop.version>2.6.0-cdh${cdh.version}</hadoop.version>
+		<hbase.version>1.2.0-cdh${cdh.version}</hbase.version>
+
 
 	</properties>
 
@@ -95,7 +96,7 @@
 		<dependency>
 			<groupId>com.cloudera.api</groupId>
 			<artifactId>cloudera-manager-api</artifactId>
-			<version>${cloudera-manager.version}</version>
+			<version>${cdh.version}</version>
 		</dependency>
         <dependency>
             <groupId>org.apache.cxf</groupId>
