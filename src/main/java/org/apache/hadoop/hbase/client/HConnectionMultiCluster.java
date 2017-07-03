@@ -280,106 +280,6 @@ public class HConnectionMultiCluster implements Connection {
     return primaryConnection.getAdmin().getTableDescriptor(TableName.valueOf(tableName));
   }
 
-//  public HRegionLocation locateRegion(TableName tableName, byte[] row)
-//      throws IOException {
-//    return primaryConnection.locateRegion(tableName, row);
-//  }
-
-//  @Deprecated
-//  public HRegionLocation locateRegion(byte[] tableName, byte[] row)
-//      throws IOException {
-//    return primaryConnection.locateRegion(tableName, row);
-//  }
-
-//  public void clearRegionCache() {
-//    primaryConnection.clearRegionCache();
-//  }
-//
-//  public void clearRegionCache(TableName tableName) {
-//    primaryConnection.clearRegionCache(tableName);
-//  }
-
-//  @Deprecated
-//  public
-//  void clearRegionCache(byte[] tableName) {
-//    primaryConnection.clearRegionCache(tableName);
-//  }
-
-//  public void deleteCachedRegionLocation(HRegionLocation location) {
-//    primaryConnection.deleteCachedRegionLocation(location);
-//  }
-
-//  public HRegionLocation relocateRegion(TableName tableName, byte[] row)
-//      throws IOException {
-//    return primaryConnection.relocateRegion(tableName, row);
-//  }
-
-//  @Deprecated
-//  public
-//  HRegionLocation relocateRegion(byte[] tableName, byte[] row)
-//      throws IOException {
-//    return primaryConnection.relocateRegion(tableName, row);
-//  }
-
-//  public void updateCachedLocations(TableName tableName, byte[] rowkey,
-//      Object exception, HRegionLocation source) {
-//    primaryConnection.updateCachedLocations(tableName, rowkey, exception, source);
-//  }
-
-//  @Deprecated
-//  public
-//  void updateCachedLocations(byte[] tableName, byte[] rowkey, Object exception,
-//      HRegionLocation source) {
-//    primaryConnection.updateCachedLocations(tableName, rowkey, exception, source);
-//  }
-
-//  public HRegionLocation locateRegion(byte[] regionName) throws IOException {
-//    return primaryConnection.locateRegion(regionName);
-//  }
-
-//  public List<HRegionLocation> locateRegions(TableName tableName)
-//      throws IOException {
-//    return primaryConnection.locateRegions(tableName);
-//  }
-
-//  @Deprecated
-//  public
-//  List<HRegionLocation> locateRegions(byte[] tableName) throws IOException {
-//    return (List<HRegionLocation>) primaryConnection.locateRegion(tableName);
-//  }
-//
-//  public List<HRegionLocation> locateRegions(TableName tableName,
-//      boolean useCache, boolean offlined) throws IOException {
-//    return (List<HRegionLocation>) primaryConnection.locateRegions(tableName,
-//        useCache, offlined);
-//  }
-
-//  @Deprecated
-//  public List<HRegionLocation> locateRegions(byte[] tableName,
-//      boolean useCache, boolean offlined) throws IOException {
-//    return (List<HRegionLocation>) primaryConnection.locateRegions(tableName,
-//        useCache, offlined);
-//  }
-
-//  public BlockingInterface getMaster() throws IOException {
-//    return primaryConnection.getAdmin().getClusterStatus().getMaster();
-//  }
-
-//  public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface getAdmin(
-//      ServerName serverName) throws IOException {
-//    return primaryConnection.getAdmin(serverName);
-//  }
-
-//  public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.BlockingInterface getClient(
-//      ServerName serverName) throws IOException {
-//    return primaryConnection.getClient(serverName);
-//  }
-
-//  public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface getAdmin(
-//      ServerName serverName, boolean getMaster) throws IOException {
-//    return primaryConnection.getAdmin(serverName);
-//  }
-
   public HRegionLocation getRegionLocation(TableName tableName, byte[] row,
       boolean reload) throws IOException {
     return primaryConnection.getRegionLocator(tableName).getRegionLocation(row, reload);
@@ -423,44 +323,6 @@ public class HConnectionMultiCluster implements Connection {
 
   }
 
-//  public void setRegionCachePrefetch(TableName tableName, boolean enable) {
-//    RuntimeException lastException = null;
-//    try {
-//      primaryConnection.setRegionCachePrefetch(tableName, enable);
-//    } catch (RuntimeException e) {
-//      LOG.error("Exception while closing primary", e);
-//      lastException = e;
-//    }
-//    for (Connection failOverConnection : failoverConnections) {
-//      try {
-//        failOverConnection.setRegionCachePrefetch(tableName, enable);
-//      } catch (RuntimeException e) {
-//        LOG.error("Exception while closing failOverConnection", e);
-//        lastException = e;
-//      }
-//    }
-//    if (lastException != null) {
-//      throw lastException;
-//    }
-//
-//  }
-
-//  public void setRegionCachePrefetch(byte[] tableName, boolean enable) {
-//    this.setRegionCachePrefetch(TableName.valueOf(tableName), enable);
-//  }
-
-//  public boolean getRegionCachePrefetch(TableName tableName) {
-//    return this.getRegionCachePrefetch(tableName);
-//  }
-
-//  public boolean getRegionCachePrefetch(byte[] tableName) {
-//    return this.getRegionCachePrefetch(TableName.valueOf(tableName));
-//  }
-
-//  public int getCurrentNrHRS() throws IOException {
-//    return primaryConnection.getCurrentNrHRS();
-//  }
-
   public HTableDescriptor[] getHTableDescriptorsByTableName(
       List<TableName> tableNames) throws IOException {
     HTableDescriptor tdArr[] = new HTableDescriptor[tableNames.size()];
@@ -488,36 +350,6 @@ public class HConnectionMultiCluster implements Connection {
   public boolean isClosed() {
     return primaryConnection.isClosed();
   }
-
-//  public void clearCaches(ServerName sn) {
-//    RuntimeException lastException = null;
-//    try {
-//      primaryConnection.clearCaches(sn);
-//    } catch (RuntimeException e) {
-//      LOG.error("Exception while closing primary", e);
-//      lastException = e;
-//    }
-//    for (Connection failOverConnection : failoverConnections) {
-//      try {
-//        failOverConnection.clearCaches(sn);
-//      } catch (RuntimeException e) {
-//        LOG.error("Exception while closing failOverConnection", e);
-//        lastException = e;
-//      }
-//    }
-//    if (lastException != null) {
-//      throw lastException;
-//    }
-//  }
-
-//  public boolean isDeadServer(ServerName serverName) {
-//    return primaryConnection.isDeadServer(serverName);
-//  }
-//
-//  public NonceGenerator getNonceGenerator() {
-//    return primaryConnection.getNonceGenerator();
-//  }
-
 
   @Deprecated
   public

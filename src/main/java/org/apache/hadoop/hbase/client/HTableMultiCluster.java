@@ -563,20 +563,6 @@ public class HTableMultiCluster implements Table {
             durability);
   }
 
-//  @Deprecated
-//  public long incrementColumnValue(byte[] row, byte[] family, byte[] qualifier,
-//                                   long amount, boolean writeToWAL) throws IOException {
-//    return primaryHTable.incrementColumnValue(row, family, qualifier, amount,
-//            writeToWAL);
-//  }
-
-//  public boolean isAutoFlush() {
-//
-//    boolean primaryAnswer = primaryHTable.isAutoFlush();
-//
-//    return primaryAnswer;
-//  }
-
   public void flushCommits() throws IOException {
     if (bufferPutList.size() > 0) {
       autoFlushMutliClusterPut(bufferPutList);

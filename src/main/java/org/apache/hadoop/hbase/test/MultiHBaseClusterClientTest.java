@@ -28,7 +28,7 @@ public class MultiHBaseClusterClientTest {
 
     @Before
     public void initialize(){
-        System.setProperty("java.security.krb5.conf", "home/balachandrapai/Desktop/Security/krb5.conf");
+        System.setProperty("java.security.krb5.conf", "/home/balachandrapai/Desktop/Security/krb5.conf");
         System.setProperty("sun.security.krb5.debug", "true");
 
         //Primary Cluster
@@ -42,7 +42,7 @@ public class MultiHBaseClusterClientTest {
         UserGroupInformation.setConfiguration(primaryConfig);
         System.out.println("Principal Authentication: ");
         final String user = "hbase/cdhmaster1@EXAMPLE.COM";
-        final String keyPath = "home/balachandrapai/Desktop/Security/cdhmaster1/hbase.keytab";
+        final String keyPath = "/home/balachandrapai/Desktop/Security/cdhmaster1/hbase.keytab";
         try {
             UserGroupInformation.loginUserFromKeytab(user, keyPath);
         } catch (IOException e) {
@@ -60,7 +60,7 @@ public class MultiHBaseClusterClientTest {
         UserGroupInformation.setConfiguration(primaryConfig);
         System.out.println("Principal Authentication: ");
         final String user2 = "hbase/cdhmaster2@EXAMPLE.COM";
-        final String keyPath2 = "home/balachandrapai/Desktop/Security/hbase.keytab";
+        final String keyPath2 = "/home/balachandrapai/Desktop/Security/hbase.keytab";
         try {
             UserGroupInformation.loginUserFromKeytab(user2, keyPath2);
         } catch (IOException e) {
