@@ -53,7 +53,9 @@ public class MultiThreadedMultiClusterWithCombinedFileTest {
     System.out.println("hbase.zookeeper.quorum: " + config.get("hbase.zookeeper.quorum"));
     System.out.println("hbase.failover.cluster.fail1.hbase.hstore.compaction.max: " + config.get("hbase.failover.cluster.fail1.hbase.hstore.compaction.max"));
 
-    HBaseAdmin admin = new HBaseAdminMultiCluster(config);
+    final Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
+
+    Admin admin = connection.getAdmin();
 
     try {
       admin.disableTable(TableName.valueOf(tableName));
@@ -87,7 +89,6 @@ public class MultiThreadedMultiClusterWithCombinedFileTest {
     config.set("hbase.client.retries.number", "1");
     config.set("hbase.client.pause", "1");
 
-    final Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
 
     System.out.println(" - Got HConnection: " + connection.getClass());
 

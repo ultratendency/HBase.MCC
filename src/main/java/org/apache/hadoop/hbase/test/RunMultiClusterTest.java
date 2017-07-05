@@ -39,8 +39,10 @@ public class RunMultiClusterTest {
     System.out.println(ConfigConst.HBASE_FAILOVER_CLUSTERS_CONFIG + ": " + config.get(ConfigConst.HBASE_FAILOVER_CLUSTERS_CONFIG));
     System.out.println("hbase.zookeeper.quorum: " + config.get("hbase.zookeeper.quorum"));
     System.out.println("hbase.failover.cluster.fail1.hbase.hstore.compaction.max: " + config.get("hbase.failover.cluster.fail1.hbase.hstore.compaction.max"));
-    
-    HBaseAdmin admin = new HBaseAdminMultiCluster(config);
+
+    Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
+
+    Admin admin = connection.getAdmin();
     
     try {
       admin.disableTable(TableName.valueOf(tableName));
@@ -73,8 +75,6 @@ public class RunMultiClusterTest {
     
     config.set("hbase.client.retries.number", "1");
     config.set("hbase.client.pause", "1");
-    
-    Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
     
     System.out.println(" - Got HConnection: " + connection.getClass());
     

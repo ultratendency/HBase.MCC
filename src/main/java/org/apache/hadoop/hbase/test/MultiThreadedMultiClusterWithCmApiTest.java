@@ -59,6 +59,8 @@ public class MultiThreadedMultiClusterWithCmApiTest {
             cmHost2, username2, password2,
             cluster2, hbaseService2);
 
+    final Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
+
     LOG.info("--Got Configuration");
 
     final String tableName = args[10];
@@ -74,7 +76,7 @@ public class MultiThreadedMultiClusterWithCmApiTest {
     LOG.info("hbase.zookeeper.quorum: " + config.get("hbase.zookeeper.quorum"));
     LOG.info("hbase.failover.cluster.fail1.hbase.hstore.compaction.max: " + config.get("hbase.failover.cluster.fail1.hbase.hstore.compaction.max"));
 
-    HBaseAdmin admin = new HBaseAdminMultiCluster(config);
+    Admin admin = connection.getAdmin();
 
     try {
       if (admin.tableExists(TableName.valueOf(tableName))) {
@@ -117,8 +119,6 @@ public class MultiThreadedMultiClusterWithCmApiTest {
 
     config.set("hbase.client.retries.number", "1");
     config.set("hbase.client.pause", "1");
-
-    final Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
 
     LOG.info(" - Got HConnection: " + connection.getClass());
 
