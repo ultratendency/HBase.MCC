@@ -59,6 +59,8 @@ public class MultiThreadedMultiClusterWithCmApiTest {
             cmHost2, username2, password2,
             cluster2, hbaseService2);
 
+    final Connection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
+
     LOG.info("--Got Configuration");
 
     final String tableName = args[10];
@@ -74,7 +76,7 @@ public class MultiThreadedMultiClusterWithCmApiTest {
     LOG.info("hbase.zookeeper.quorum: " + config.get("hbase.zookeeper.quorum"));
     LOG.info("hbase.failover.cluster.fail1.hbase.hstore.compaction.max: " + config.get("hbase.failover.cluster.fail1.hbase.hstore.compaction.max"));
 
-    HBaseAdmin admin = new HBaseAdminMultiCluster(config);
+    Admin admin = connection.getAdmin();
 
     try {
       if (admin.tableExists(TableName.valueOf(tableName))) {
@@ -107,18 +109,16 @@ public class MultiThreadedMultiClusterWithCmApiTest {
     splitKeys[8][0] = '8';
     splitKeys[9][0] = '9';
 
-    LOG.info(" - About to create Table " + tableD.getName());
+    LOG.info(" - About to create Table " + tableD.getTableName());
 
     admin.createTable(tableD, splitKeys);
 
-    LOG.info(" - Created Table " + tableD.getName());
+    LOG.info(" - Created Table " + tableD.getTableName());
 
     LOG.info("Getting HConnection");
 
     config.set("hbase.client.retries.number", "1");
     config.set("hbase.client.pause", "1");
-
-    final HConnection connection = HConnectionManagerMultiClusterWrapper.createConnection(config);
 
     LOG.info(" - Got HConnection: " + connection.getClass());
 
@@ -144,7 +144,7 @@ public class MultiThreadedMultiClusterWithCmApiTest {
         public void run() {
           try {
             Random r = new Random();
-            HTableInterface table = connection.getTable(tableName);
+            Table table = connection.getTable(TableName.valueOf(tableName));
             HTableStats stats = ((HTableMultiCluster) table).getStats();
             stats.printStats(writer, 5000);
 
@@ -153,7 +153,7 @@ public class MultiThreadedMultiClusterWithCmApiTest {
               int hash = r.nextInt(10);
 
               Put put = new Put(Bytes.toBytes(hash + ".key." + i + "." + StringUtils.leftPad(String.valueOf(i * threadFinalNum), 12)));
-              put.add(Bytes.toBytes(familyName), Bytes.toBytes("C"), Bytes.toBytes("Value:" + i * threadFinalNum));
+              put.addColumn(Bytes.toBytes(familyName), Bytes.toBytes("C"), Bytes.toBytes("Value:" + i * threadFinalNum));
               table.put(put);
 
               Thread.sleep(millisecondToWait);

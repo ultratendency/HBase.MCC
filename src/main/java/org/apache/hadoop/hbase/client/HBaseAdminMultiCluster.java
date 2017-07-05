@@ -21,26 +21,8 @@ public class HBaseAdminMultiCluster extends HBaseAdmin {
 
   Map<String, HBaseAdmin> failoverAdminMap = new HashMap<String, HBaseAdmin>();
 
-  public HBaseAdminMultiCluster(Configuration c)
-      throws MasterNotRunningException, ZooKeeperConnectionException,
-      IOException {
-    super(HBaseMultiClusterConfigUtil.splitMultiConfigFile(c).get(
-        HBaseMultiClusterConfigUtil.PRIMARY_NAME));
-
-    Map<String, Configuration> configs = HBaseMultiClusterConfigUtil
-        .splitMultiConfigFile(c);
-
-    for (Entry<String, Configuration> entry : configs.entrySet()) {
-
-      if (!entry.getKey().equals(HBaseMultiClusterConfigUtil.PRIMARY_NAME)) {
-        HBaseAdmin admin = new HBaseAdmin(entry.getValue());
-        LOG.info("creating HBaseAdmin for : " + entry.getKey());
-        failoverAdminMap.put(entry.getKey(), admin);
-        LOG.info(" - successfully creating HBaseAdmin for : " + entry.getKey());
-      }
-    }
-    LOG.info("Successful loaded all HBaseAdmins");
-
+  public HBaseAdminMultiCluster(ClusterConnection connection) {
+    super(connection);
   }
 
   @Override
@@ -230,7 +212,7 @@ public class HBaseAdminMultiCluster extends HBaseAdmin {
     callArray[counter++] = new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        LOG.info("createTableAsync: " + desc.getName() + " for cluster: primary");
+        LOG.info("createTableAsync: " + desc.getTableName() + " for cluster: primary");
         HBaseAdminMultiCluster.super.createTableAsync(desc, splitKeys);
         return null;
       }
@@ -240,7 +222,7 @@ public class HBaseAdminMultiCluster extends HBaseAdmin {
       callArray[counter++] = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
-          LOG.info("createTableAsync: " + desc.getName() + " for cluster: " + entry.getKey());
+          LOG.info("createTableAsync: " + desc.getTableName() + " for cluster: " + entry.getKey());
           entry.getValue().createTableAsync(desc, splitKeys);
           return null;
         }

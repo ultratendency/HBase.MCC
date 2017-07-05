@@ -14,10 +14,10 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService.BlockingInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class HConnectionMultiCluster implements HConnection {
+public class HConnectionMultiCluster implements Connection {
 
-  HConnection primaryConnection;
-  HConnection[] failoverConnections;
+  Connection primaryConnection;
+  Connection[] failoverConnections;
   Configuration originalConfiguration;
   boolean isMasterMaster;
   int waitTimeBeforeAcceptingResults;
@@ -34,7 +34,7 @@ public class HConnectionMultiCluster implements HConnection {
   ExecutorService executor;
 
   public HConnectionMultiCluster(Configuration originalConfiguration,
-      HConnection primaryConnection, HConnection[] failoverConnections) {
+      Connection primaryConnection, Connection[] failoverConnections) {
     this.primaryConnection = primaryConnection;
     this.failoverConnections = failoverConnections;
     this.originalConfiguration = originalConfiguration;
@@ -78,7 +78,7 @@ public class HConnectionMultiCluster implements HConnection {
 
   public void abort(String why, Throwable e) {
     primaryConnection.abort(why, e);
-    for (HConnection failOverConnection : failoverConnections) {
+    for (Connection failOverConnection : failoverConnections) {
       failOverConnection.abort(why, e);
     }
   }
@@ -96,7 +96,7 @@ public class HConnectionMultiCluster implements HConnection {
       LOG.error("Exception while closing primary", e);
       lastException = e;
     }
-    for (HConnection failOverConnection : failoverConnections) {
+    for (Connection failOverConnection : failoverConnections) {
       try {
         failOverConnection.close();
       } catch (Exception e) {
@@ -113,29 +113,29 @@ public class HConnectionMultiCluster implements HConnection {
     return originalConfiguration;
   }
 
-  @Override
-  public HTableInterface getTable(String tableName) throws IOException {
+
+  public Table getTable(String tableName) throws IOException {
     return this.getTable(Bytes.toBytes(tableName));
   }
 
-  @Override
-  public HTableInterface getTable(byte[] tableName) throws IOException {
+
+  public Table getTable(byte[] tableName) throws IOException {
     return this.getTable(TableName.valueOf(tableName));
   }
 
-  @Override
-  public HTableInterface getTable(TableName tableName) throws IOException {
+
+  public Table getTable(TableName tableName) throws IOException {
     LOG.info(" -- getting primaryHTable" + primaryConnection.getConfiguration().get("hbase.zookeeper.quorum"));
-    HTableInterface primaryHTable = primaryConnection.getTable(tableName);
-    primaryHTable.setAutoFlush(true, true);
+    Table primaryHTable = primaryConnection.getTable(tableName);
+    primaryConnection.getBufferedMutator(tableName).flush();
 
     LOG.info(" --- got primaryHTable");
-    ArrayList<HTableInterface> failoverHTables = new ArrayList<HTableInterface>();
-    for (HConnection failOverConnection : failoverConnections) {
+    ArrayList<Table> failoverHTables = new ArrayList<Table>();
+    for (Connection failOverConnection : failoverConnections) {
       LOG.info(" -- getting failoverHTable:" + failOverConnection.getConfiguration().get("hbase.zookeeper.quorum"));
 
-      HTableInterface htable = failOverConnection.getTable(tableName);
-      htable.setAutoFlush(true, true);
+      Table htable = failOverConnection.getTable(tableName);
+      primaryConnection.getBufferedMutator(tableName).flush();
 
       failoverHTables.add(htable);
       LOG.info(" --- got failoverHTable");
@@ -153,21 +153,21 @@ public class HConnectionMultiCluster implements HConnection {
             waitTimeFromLastPrimaryFail);
   }
 
-  public HTableInterface getTable(String tableName, ExecutorService pool)
+  public Table getTable(String tableName, ExecutorService pool)
       throws IOException {
     return this.getTable(TableName.valueOf(tableName), pool);
   }
 
-  public HTableInterface getTable(byte[] tableName, ExecutorService pool)
+  public Table getTable(byte[] tableName, ExecutorService pool)
       throws IOException {
     return this.getTable(TableName.valueOf(tableName), pool);
   }
 
-  public HTableInterface getTable(TableName tableName, ExecutorService pool)
+  public Table getTable(TableName tableName, ExecutorService pool)
       throws IOException {
-    HTableInterface primaryHTable = primaryConnection.getTable(tableName, pool);
-    ArrayList<HTableInterface> failoverHTables = new ArrayList<HTableInterface>();
-    for (HConnection failOverConnection : failoverConnections) {
+    Table primaryHTable = primaryConnection.getTable(tableName, pool);
+    ArrayList<Table> failoverHTables = new ArrayList<Table>();
+    for (Connection failOverConnection : failoverConnections) {
       failoverHTables.add(failOverConnection.getTable(tableName, pool));
     }
 
@@ -183,193 +183,117 @@ public class HConnectionMultiCluster implements HConnection {
             waitTimeFromLastPrimaryFail);
   }
 
-  public boolean isMasterRunning() throws MasterNotRunningException,
-          ZooKeeperConnectionException {
-    return primaryConnection.isMasterRunning();
+  @Override
+  public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
+    return primaryConnection.getBufferedMutator(tableName);
   }
-  
+
+  @Override
+  public BufferedMutator getBufferedMutator(BufferedMutatorParams bufferedMutatorParams) throws IOException {
+    return primaryConnection.getBufferedMutator(bufferedMutatorParams);
+  }
+
+  @Override
+  public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+    return primaryConnection.getRegionLocator(tableName);
+  }
+
+  @Override
+  public Admin getAdmin() throws IOException {
+    return primaryConnection.getAdmin();
+  }
+
+  public boolean isMasterRunning() throws MasterNotRunningException,
+          ZooKeeperConnectionException, IOException {
+    return primaryConnection.getAdmin().getClusterStatus().getMaster() != null;
+  }
+
   public boolean isTableEnabled(TableName tableName) throws IOException {
-    return primaryConnection.isTableEnabled(tableName);
+    return primaryConnection.getAdmin().isTableEnabled(tableName);
   }
 
   @Deprecated
   public
   boolean isTableEnabled(byte[] tableName) throws IOException {
-    return primaryConnection.isTableEnabled(tableName);
+    return primaryConnection.getAdmin().isTableEnabled(TableName.valueOf(tableName));
   }
 
   public boolean isTableDisabled(TableName tableName) throws IOException {
-    return primaryConnection.isTableDisabled(tableName);
+    return primaryConnection.getAdmin().isTableDisabled(tableName);
   }
 
   @Deprecated
   public
   boolean isTableDisabled(byte[] tableName) throws IOException {
-    return primaryConnection.isTableDisabled(tableName);
+    return primaryConnection.getAdmin().isTableDisabled(TableName.valueOf(tableName));
   }
 
   public boolean isTableAvailable(TableName tableName) throws IOException {
-    return primaryConnection.isTableAvailable(tableName);
+    return primaryConnection.getAdmin().isTableAvailable(tableName);
   }
 
   @Deprecated
   public
   boolean isTableAvailable(byte[] tableName) throws IOException {
-    return primaryConnection.isTableAvailable(tableName);
+    return primaryConnection.getAdmin().isTableAvailable(TableName.valueOf(tableName));
   }
 
   public boolean isTableAvailable(TableName tableName, byte[][] splitKeys)
       throws IOException {
-    return primaryConnection.isTableAvailable(tableName, splitKeys);
+    return primaryConnection.getAdmin().isTableAvailable(tableName, splitKeys);
   }
 
   @Deprecated
   public
   boolean isTableAvailable(byte[] tableName, byte[][] splitKeys)
       throws IOException {
-    return primaryConnection.isTableAvailable(tableName, splitKeys);
+    return primaryConnection.getAdmin().isTableAvailable(TableName.valueOf(tableName), splitKeys);
   }
 
   public HTableDescriptor[] listTables() throws IOException {
-    return primaryConnection.listTables();
+    return primaryConnection.getAdmin().listTables();
   }
 
   @Deprecated
   public String[] getTableNames() throws IOException {
-    return primaryConnection.getTableNames();
+    TableName[] tableNames = primaryConnection.getAdmin().listTableNames();
+    String[] tNames = new String[tableNames.length];
+    int i =0;
+    for (TableName tn: tableNames) {
+      tNames[i] = tn.toString();
+      i++;
+    }
+    return tNames;
   }
 
   public TableName[] listTableNames() throws IOException {
-    return primaryConnection.listTableNames();
+    return primaryConnection.getAdmin().listTableNames();
   }
 
   public HTableDescriptor getHTableDescriptor(TableName tableName)
       throws IOException {
-    return primaryConnection.getHTableDescriptor(tableName);
+    return primaryConnection.getAdmin().getTableDescriptor(tableName);
   }
 
   @Deprecated
-  public
-  HTableDescriptor getHTableDescriptor(byte[] tableName) throws IOException {
-    return primaryConnection.getHTableDescriptor(tableName);
-  }
-
-  public HRegionLocation locateRegion(TableName tableName, byte[] row)
-      throws IOException {
-    return primaryConnection.locateRegion(tableName, row);
-  }
-
-  @Deprecated
-  public HRegionLocation locateRegion(byte[] tableName, byte[] row)
-      throws IOException {
-    return primaryConnection.locateRegion(tableName, row);
-  }
-
-  public void clearRegionCache() {
-    primaryConnection.clearRegionCache();
-  }
-
-  public void clearRegionCache(TableName tableName) {
-    primaryConnection.clearRegionCache(tableName);
-  }
-
-  @Deprecated
-  public
-  void clearRegionCache(byte[] tableName) {
-    primaryConnection.clearRegionCache(tableName);
-
-  }
-
-  public void deleteCachedRegionLocation(HRegionLocation location) {
-    primaryConnection.deleteCachedRegionLocation(location);
-  }
-
-  public HRegionLocation relocateRegion(TableName tableName, byte[] row)
-      throws IOException {
-    return primaryConnection.relocateRegion(tableName, row);
-  }
-
-  @Deprecated
-  public
-  HRegionLocation relocateRegion(byte[] tableName, byte[] row)
-      throws IOException {
-    return primaryConnection.relocateRegion(tableName, row);
-  }
-
-  public void updateCachedLocations(TableName tableName, byte[] rowkey,
-      Object exception, HRegionLocation source) {
-    primaryConnection.updateCachedLocations(tableName, rowkey, exception, source);
-  }
-
-  @Deprecated
-  public
-  void updateCachedLocations(byte[] tableName, byte[] rowkey, Object exception,
-      HRegionLocation source) {
-    primaryConnection.updateCachedLocations(tableName, rowkey, exception, source);
-  }
-
-  public HRegionLocation locateRegion(byte[] regionName) throws IOException {
-    return primaryConnection.locateRegion(regionName);
-  }
-
-  public List<HRegionLocation> locateRegions(TableName tableName)
-      throws IOException {
-    return primaryConnection.locateRegions(tableName);
-  }
-
-  @Deprecated
-  public
-  List<HRegionLocation> locateRegions(byte[] tableName) throws IOException {
-    return (List<HRegionLocation>) primaryConnection.locateRegion(tableName);
-  }
-
-  public List<HRegionLocation> locateRegions(TableName tableName,
-      boolean useCache, boolean offlined) throws IOException {
-    return (List<HRegionLocation>) primaryConnection.locateRegions(tableName,
-        useCache, offlined);
-  }
-
-  @Deprecated
-  public List<HRegionLocation> locateRegions(byte[] tableName,
-      boolean useCache, boolean offlined) throws IOException {
-    return (List<HRegionLocation>) primaryConnection.locateRegions(tableName,
-        useCache, offlined);
-  }
-
-  public BlockingInterface getMaster() throws IOException {
-    return primaryConnection.getMaster();
-  }
-
-  public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface getAdmin(
-      ServerName serverName) throws IOException {
-    return primaryConnection.getAdmin(serverName);
-  }
-
-  public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService.BlockingInterface getClient(
-      ServerName serverName) throws IOException {
-    return primaryConnection.getClient(serverName);
-  }
-
-  public org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface getAdmin(
-      ServerName serverName, boolean getMaster) throws IOException {
-    return primaryConnection.getAdmin(serverName);
+  public HTableDescriptor getHTableDescriptor(byte[] tableName) throws IOException {
+    return primaryConnection.getAdmin().getTableDescriptor(TableName.valueOf(tableName));
   }
 
   public HRegionLocation getRegionLocation(TableName tableName, byte[] row,
       boolean reload) throws IOException {
-    return primaryConnection.getRegionLocation(tableName, row, reload);
+    return primaryConnection.getRegionLocator(tableName).getRegionLocation(row, reload);
   }
 
   @Deprecated
   public
   HRegionLocation getRegionLocation(byte[] tableName, byte[] row, boolean reload)
       throws IOException {
-    return primaryConnection.getRegionLocation(tableName, row, reload);
+    return primaryConnection.getRegionLocator(TableName.valueOf(tableName)).getRegionLocation(row, reload);
   }
 
   @Deprecated
-  public
-  void processBatch(List<? extends Row> actions, TableName tableName,
+  public void processBatch(List<? extends Row> actions, TableName tableName,
       ExecutorService pool, Object[] results) throws IOException,
       InterruptedException {
     throw new RuntimeException("processBatch not supported in " + this.getClass());
@@ -381,107 +305,51 @@ public class HConnectionMultiCluster implements HConnection {
   void processBatch(List<? extends Row> actions, byte[] tableName,
       ExecutorService pool, Object[] results) throws IOException,
       InterruptedException {
-    primaryConnection.processBatch(actions, tableName, pool, results);
+    primaryConnection.getTable(TableName.valueOf(tableName)).batch(actions, results);
   }
 
   @Deprecated
   public <R> void processBatchCallback(List<? extends Row> list,
       TableName tableName, ExecutorService pool, Object[] results,
       Callback<R> callback) throws IOException, InterruptedException {
-    primaryConnection.processBatchCallback(list, tableName, pool, results, callback);
+    primaryConnection.getTable(tableName).batchCallback(list, results, callback);
   }
 
   @Deprecated
   public <R> void processBatchCallback(List<? extends Row> list,
       byte[] tableName, ExecutorService pool, Object[] results,
       Callback<R> callback) throws IOException, InterruptedException {
-    primaryConnection.processBatchCallback(list, tableName, pool, results, callback);
+    primaryConnection.getTable(TableName.valueOf(tableName)).batchCallback(list, results, callback);
 
-  }
-
-  public void setRegionCachePrefetch(TableName tableName, boolean enable) {
-    RuntimeException lastException = null;
-    try {
-      primaryConnection.setRegionCachePrefetch(tableName, enable);
-    } catch (RuntimeException e) {
-      LOG.error("Exception while closing primary", e);
-      lastException = e;
-    }
-    for (HConnection failOverConnection : failoverConnections) {
-      try {
-        failOverConnection.setRegionCachePrefetch(tableName, enable);
-      } catch (RuntimeException e) {
-        LOG.error("Exception while closing failOverConnection", e);
-        lastException = e;
-      }
-    }
-    if (lastException != null) {
-      throw lastException;
-    }
-
-  }
-
-  public void setRegionCachePrefetch(byte[] tableName, boolean enable) {
-    this.setRegionCachePrefetch(TableName.valueOf(tableName), enable);
-  }
-
-  public boolean getRegionCachePrefetch(TableName tableName) {
-    return this.getRegionCachePrefetch(tableName);
-  }
-
-  public boolean getRegionCachePrefetch(byte[] tableName) {
-    return this.getRegionCachePrefetch(TableName.valueOf(tableName));
-  }
-
-  public int getCurrentNrHRS() throws IOException {
-    return primaryConnection.getCurrentNrHRS();
   }
 
   public HTableDescriptor[] getHTableDescriptorsByTableName(
       List<TableName> tableNames) throws IOException {
-    return primaryConnection.getHTableDescriptorsByTableName(tableNames);
+    HTableDescriptor tdArr[] = new HTableDescriptor[tableNames.size()];
+    int i=0;
+    for (TableName tn: tableNames) {
+      tdArr[i] = primaryConnection.getAdmin().getTableDescriptor(tn);
+      i++;
+    }
+    return tdArr;
   }
 
   @Deprecated
   public
   HTableDescriptor[] getHTableDescriptors(List<String> tableNames)
       throws IOException {
-    return primaryConnection.getHTableDescriptors(tableNames);
+    HTableDescriptor tdArr[] = new HTableDescriptor[tableNames.size()];
+    int i=0;
+    for (String tn: tableNames) {
+      tdArr[i] = primaryConnection.getAdmin().getTableDescriptor(TableName.valueOf(tn));
+      i++;
+    }
+    return tdArr;
   }
 
   public boolean isClosed() {
     return primaryConnection.isClosed();
   }
-
-  public void clearCaches(ServerName sn) {
-    RuntimeException lastException = null;
-    try {
-      primaryConnection.clearCaches(sn);
-    } catch (RuntimeException e) {
-      LOG.error("Exception while closing primary", e);
-      lastException = e;
-    }
-    for (HConnection failOverConnection : failoverConnections) {
-      try {
-        failOverConnection.clearCaches(sn);
-      } catch (RuntimeException e) {
-        LOG.error("Exception while closing failOverConnection", e);
-        lastException = e;
-      }
-    }
-    if (lastException != null) {
-      throw lastException;
-    }
-  }
-
-  public boolean isDeadServer(ServerName serverName) {
-    return primaryConnection.isDeadServer(serverName);
-  }
-
-  public NonceGenerator getNonceGenerator() {
-    return primaryConnection.getNonceGenerator();
-  }
-
 
   @Deprecated
   public
